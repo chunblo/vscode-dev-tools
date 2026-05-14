@@ -12,7 +12,9 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 | `Dev Tools: Export MD to JIRA (Server)` | Wiki Markup (for JIRA Server / Confluence) |
 | `Dev Tools: Git Release (Zip)` | Creates a GitHub release from a `.app` file |
 | `Dev Tools: Git Commit Url (Copy)` | Shows recent commits in a picker, copies selected commit URL to clipboard |
-| `Dev Tools: Parse Stringified JSON` | Parses JSON files (including stringified/double-encoded), displays result in new untitled document |
+| `Dev Tools: JSON - Parse` | Parses JSON (including double-encoded/stringified), displays prettified result in new document |
+| `Dev Tools: JSON - Minify` | Minifies JSON to a single line, displays result in new document |
+| `Dev Tools: JSON - Stringify` | Double-encodes JSON into a JSON string value, displays result in new document |
 
 A toast notification confirms the content was copied to your clipboard.
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { convertToJira } from './converter';
 import { registerGitReleaseAl } from './tools/git-release-al';
 import { registerGitCommitUrl } from './tools/git-commit-url';
-import { registerParseStringifiedJson } from './tools/parse-stringified-json';
+import { registerJsonTools } from './tools/parse-stringified-json';
 
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     registerGitReleaseAl(context);
     registerGitCommitUrl(context);
-    registerParseStringifiedJson(context);
+    registerJsonTools(context);
 }
 
 export function deactivate(): void {}

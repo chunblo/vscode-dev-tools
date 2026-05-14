@@ -30,8 +30,16 @@
         "title": "Dev Tools: Git Commit Url (Copy)"
       },
       {
-        "command": "dev-tools.parseStringifiedJson",
-        "title": "Dev Tools: Parse Stringified JSON"
+        "command": "dev-tools.jsonParse",
+        "title": "Dev Tools: JSON - Parse"
+      },
+      {
+        "command": "dev-tools.jsonMinify",
+        "title": "Dev Tools: JSON - Minify"
+      },
+      {
+        "command": "dev-tools.jsonStringify",
+        "title": "Dev Tools: JSON - Stringify"
       }
     ],
     "configuration": {
@@ -48,7 +56,8 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "vscode:prepublish": "node esbuild.js --production"
+    "vscode:prepublish": "node esbuild.js --production",
+    "test": "vitest run"
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -57,6 +66,7 @@
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.23.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
   }
 }
