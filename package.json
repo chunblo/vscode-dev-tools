@@ -1,0 +1,58 @@
+{
+  "name": "vscode-dev-tools",
+  "displayName": "Dev Tools",
+  "description": "Convert the active Markdown file to JIRA-compatible format and copy to clipboard.",
+  "version": "0.1.1",
+  "publisher": "vincentlo",
+  "repository": { "type": "git", "url": "https://github.com/vincentlo/vscode-md-to-jira" },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+"contributes": {
+    "commands": [
+      {
+        "command": "dev-tools.exportCloud",
+        "title": "Dev Tools: Export MD to JIRA (Cloud)"
+      },
+      {
+        "command": "dev-tools.exportServer",
+        "title": "Dev Tools: Export MD to JIRA (Server)"
+      },
+      {
+        "command": "dev-tools.gitReleaseAl",
+        "title": "Dev Tools: Git Release (AL)"
+      },
+      {
+        "command": "dev-tools.gitCommitUrl",
+        "title": "Dev Tools: Git Commit Url (Copy)"
+      }
+    ],
+    "configuration": {
+      "title": "Dev Tools",
+      "properties": {
+        "dev-tools.gitCommitUrlCount": {
+          "type": "number",
+          "default": 50,
+          "description": "Number of commits to show in the Git Commit Url picker"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "vscode:prepublish": "node esbuild.js --production"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "marked": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.4.0"
+  }
+}

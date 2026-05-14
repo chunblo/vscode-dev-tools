@@ -1,0 +1,232 @@
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import archiver from 'archiver';
+import { findGitRoot } from '../../shared/git';
+
+const execAsync = promisify(exec);
+
+function showError(message: string): void {
+    vscode.window.showErrorMessage(`Git Release (AL): ${message}`);
+}
+
+function showInfo(message: string): void {
+    vscode.window.showInformationMessage(`Git Release (AL): ${message}`);
+}
+
+async function execCommand(command: string, cwd?: string): Promise<string> {
+    const { stdout, stderr } = await execAsync(command, { cwd });
+    if (stderr) {
+        console.warn(`[exec] ${command} stderr: ${stderr}`);
+    }
+    return stdout.trim();
+}
+
+async function checkCommandExists(command: string): Promise<boolean> {
+    try {
+        await execAsync(`which ${command}`);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function getGitRemoteUrl(cwd?: string): Promise<string | null> {
+    try {
+        return await execCommand('git config --get remote.origin.url', cwd);
+    } catch {
+        return null;
+    }
+}
+
+function parseGitHubRepo(remoteUrl: string): { owner: string; repo: string } | null {
+    const sshMatch = remoteUrl.match(/^git@github\.com:(.+)\/(.+)\.git$/);
+    if (sshMatch) {
+        return { owner: sshMatch[1], repo: sshMatch[2] };
+    }
+    const httpsMatch = remoteUrl.match(/^https:\/\/github\.com\/(.+)\/(.+)\.git$/);
+    if (httpsMatch) {
+        return { owner: httpsMatch[1], repo: httpsMatch[2] };
+    }
+    return null;
+}
+
+async function tagExists(tag: string): Promise<boolean> {
+    try {
+        await execCommand(`git rev-parse ${tag}`);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function createAndPushTag(tag: string): Promise<void> {
+    await execCommand(`git tag ${tag}`);
+    await execCommand(`git push origin ${tag}`);
+}
+
+function createZip(sourcePath: string, zipPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', () => resolve());
+        archive.on('error', (err) => reject(err));
+
+        archive.pipe(output);
+        archive.file(sourcePath, { name: path.basename(sourcePath) });
+        archive.finalize();
+    });
+}
+
+export async function registerGitReleaseAl(context: vscode.ExtensionContext): Promise<void> {
+    const command = vscode.commands.registerCommand('dev-tools.gitReleaseAl', async () => {
+        const appFile = await vscode.window.showOpenDialog({
+            title: 'Select AL App File',
+            openLabel: 'Select .app file',
+            canSelectMany: false,
+            filters: { 'AL App': ['app'] },
+        });
+
+        if (!appFile) {
+            return;
+        }
+
+        const appPath = appFile[0].fsPath;
+
+        if (!fs.existsSync(appPath)) {
+            showError(`File does not exist: ${appPath}`);
+            return;
+        }
+
+        if (!fs.statSync(appPath).isFile()) {
+            showError(`Path is not a file: ${appPath}`);
+            return;
+        }
+
+        if (path.extname(appPath) !== '.app') {
+            showError(`Selected file is not a .app file: ${appPath}`);
+            return;
+        }
+
+        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+        let repoRoot: string | undefined;
+        if (activeFilePath) {
+            repoRoot = findGitRoot(activeFilePath);
+        }
+        if (!repoRoot) {
+            repoRoot = findGitRoot(appPath);
+        }
+        if (!repoRoot) {
+            repoRoot = path.dirname(appPath);
+        }
+        const cwd = repoRoot;
+
+        const tag = await vscode.window.showInputBox({
+            title: 'Tag Name',
+            prompt: 'Enter the git tag name (e.g. v1.0.0)',
+            validateInput: (value) => {
+                if (!value || value.trim() === '') {
+                    return 'Tag name is required';
+                }
+                return null;
+            },
+        });
+
+        if (!tag) {
+            return;
+        }
+
+        const appName = path.basename(appPath);
+        const zipName = appName.replace('.app', '.zip');
+
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Git Release (AL)',
+                cancellable: false,
+            },
+            async (progress) => {
+                try {
+                    progress.report({ message: 'Checking gh CLI installation...' });
+                    if (!(await checkCommandExists('gh'))) {
+                        showError('GitHub CLI (gh) is not installed. Please install it first.');
+                        return;
+                    }
+
+                    progress.report({ message: 'Checking gh CLI authentication...' });
+                    try {
+                        await execCommand('gh auth status');
+                    } catch {
+                        showError('Not authenticated with GitHub CLI. Please run "gh auth login" first.');
+                        return;
+                    }
+
+                    progress.report({ message: 'Getting git remote URL...' });
+                    const remoteUrl = await getGitRemoteUrl(cwd);
+                    if (!remoteUrl) {
+                        showError('No git remote found.');
+                        return;
+                    }
+
+                    const repoInfo = parseGitHubRepo(remoteUrl);
+                    if (!repoInfo) {
+                        showError('Could not parse GitHub repository from remote URL.');
+                        return;
+                    }
+
+                    const { owner, repo } = repoInfo;
+
+                    progress.report({ message: `Checking if tag "${tag}" exists...` });
+                    let tagCreated = false;
+                    if (!(await tagExists(tag))) {
+                        progress.report({ message: `Tag "${tag}" does not exist. Prompting user...` });
+                        const action = await vscode.window.showInformationMessage(
+                            `Tag "${tag}" does not exist. Create and push it?`,
+                            { modal: true },
+                            'Create & Push',
+                            'Cancel'
+                        );
+
+                        if (action === 'Create & Push') {
+                            progress.report({ message: 'Creating and pushing tag...' });
+                            await createAndPushTag(tag);
+                            tagCreated = true;
+                        } else {
+                            showInfo('Release cancelled.');
+                            return;
+                        }
+                    }
+
+                    progress.report({ message: 'Creating zip archive...' });
+                    const zipPath = path.join(cwd, zipName);
+                    if (fs.existsSync(zipPath)) {
+                        fs.unlinkSync(zipPath);
+                    }
+                    await createZip(appPath, zipPath);
+
+                    progress.report({ message: 'Creating GitHub release...' });
+                    const releaseUrl = `https://github.com/${owner}/${repo}/releases/tag/${tag}`;
+                    await execCommand(
+                        `gh release create ${tag} --title "${tag}" --notes "Automated release for ${tag}" --repo ${owner}/${repo} "${zipName}"`,
+                        { cwd }
+                    );
+
+                    await vscode.env.clipboard.writeText(releaseUrl);
+
+                    fs.unlinkSync(zipPath);
+
+                    progress.report({ message: 'Done!' });
+                    showInfo(`Release created and URL copied to clipboard!${tagCreated ? ' (Tag created and pushed)' : ''}`);
+                } catch (err) {
+                    const error = err as Error;
+                    showError(`Failed: ${error.message}`);
+                }
+            }
+        );
+    });
+
+    context.subscriptions.push(command);
+}
