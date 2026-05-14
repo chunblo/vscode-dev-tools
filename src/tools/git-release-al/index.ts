@@ -96,10 +96,10 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
         }
 
         const appFile = await vscode.window.showOpenDialog({
-            title: 'Select AL App File',
-            openLabel: 'Select .app file',
+            title: 'Select File for Release',
+            openLabel: 'Select file',
             canSelectMany: false,
-            filters: { 'AL App': ['app'] },
+            filters: { 'All Files': ['*'] },
             defaultUri: initialDir ? vscode.Uri.file(initialDir) : undefined,
         });
 
@@ -116,11 +116,6 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
 
         if (!fs.statSync(appPath).isFile()) {
             showError(`Path is not a file: ${appPath}`);
-            return;
-        }
-
-        if (path.extname(appPath) !== '.app') {
-            showError(`Selected file is not a .app file: ${appPath}`);
             return;
         }
 
@@ -149,7 +144,8 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
         }
 
         const appName = path.basename(appPath);
-        const zipName = appName.replace('.app', '.zip');
+        const appExt = path.extname(appName);
+        const zipName = (appExt ? appName.slice(0, -appExt.length) : appName) + '.zip';
 
         await vscode.window.withProgress(
             {
