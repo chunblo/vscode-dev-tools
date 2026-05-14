@@ -9,11 +9,11 @@ import { findGitRoot } from '../../shared/git';
 const execAsync = promisify(exec);
 
 function showError(message: string): void {
-    vscode.window.showErrorMessage(`Git Release (AL): ${message}`);
+    vscode.window.showErrorMessage(`Git Release (Zip): ${message}`);
 }
 
 function showInfo(message: string): void {
-    vscode.window.showInformationMessage(`Git Release (AL): ${message}`);
+    vscode.window.showInformationMessage(`Git Release (Zip): ${message}`);
 }
 
 async function execCommand(command: string, cwd?: string): Promise<string> {
@@ -154,7 +154,7 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Git Release (AL)',
+                title: 'Git Release (Zip)',
                 cancellable: false,
             },
             async (progress) => {

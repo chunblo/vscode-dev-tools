@@ -23,7 +23,7 @@
       },
       {
         "command": "dev-tools.gitReleaseAl",
-        "title": "Dev Tools: Git Release (AL)"
+        "title": "Dev Tools: Git Release (Zip)"
       },
       {
         "command": "dev-tools.gitCommitUrl",

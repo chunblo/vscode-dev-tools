@@ -10,7 +10,7 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 |---|---|
 | `Dev Tools: Export MD to JIRA (Cloud)` | Markdown (for JIRA Cloud) |
 | `Dev Tools: Export MD to JIRA (Server)` | Wiki Markup (for JIRA Server / Confluence) |
-| `Dev Tools: Git Release (AL)` | Creates a GitHub release from a `.app` file |
+| `Dev Tools: Git Release (Zip)` | Creates a GitHub release from a `.app` file |
 | `Dev Tools: Git Commit Url (Copy)` | Shows recent commits in a picker, copies selected commit URL to clipboard |
 | `Dev Tools: Parse Stringified JSON` | Parses JSON files (including stringified/double-encoded), displays result in new untitled document |
 
