@@ -1,6 +1,6 @@
-# MD to JIRA
+# VSCode Dev Tools
 
-A VS Code extension that converts the active file from Markdown to JIRA-compatible format and copies the result to the clipboard.
+Developer productivity tools for VS Code: Markdown-to-JIRA conversion, Git commit URL picker, GitHub release creation, and JSON utilities
 
 ## Commands
 
