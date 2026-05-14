@@ -53,18 +53,18 @@ function parseGitHubRepo(remoteUrl: string): { owner: string; repo: string } | n
     return null;
 }
 
-async function tagExists(tag: string): Promise<boolean> {
+async function tagExists(tag: string, cwd: string): Promise<boolean> {
     try {
-        await execCommand(`git rev-parse ${tag}`);
+        await execCommand(`git rev-parse ${tag}`, cwd);
         return true;
     } catch {
         return false;
     }
 }
 
-async function createAndPushTag(tag: string): Promise<void> {
-    await execCommand(`git tag ${tag}`);
-    await execCommand(`git push origin ${tag}`);
+async function createAndPushTag(tag: string, cwd: string): Promise<void> {
+    await execCommand(`git tag ${tag}`, cwd);
+    await execCommand(`git push origin ${tag}`, cwd);
 }
 
 function createZip(sourcePath: string, zipPath: string): Promise<void> {
@@ -83,11 +83,24 @@ function createZip(sourcePath: string, zipPath: string): Promise<void> {
 
 export async function registerGitReleaseAl(context: vscode.ExtensionContext): Promise<void> {
     const command = vscode.commands.registerCommand('dev-tools.gitReleaseAl', async () => {
+        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+        let initialDir: string | undefined;
+        if (activeFilePath) {
+            initialDir = findGitRoot(activeFilePath) ?? undefined;
+        }
+        if (!initialDir) {
+            const fallback = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (fallback) {
+                initialDir = findGitRoot(fallback) ?? undefined;
+            }
+        }
+
         const appFile = await vscode.window.showOpenDialog({
             title: 'Select AL App File',
             openLabel: 'Select .app file',
             canSelectMany: false,
             filters: { 'AL App': ['app'] },
+            defaultUri: initialDir ? vscode.Uri.file(initialDir) : undefined,
         });
 
         if (!appFile) {
@@ -111,13 +124,9 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
             return;
         }
 
-        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
-        let repoRoot: string | undefined;
-        if (activeFilePath) {
-            repoRoot = findGitRoot(activeFilePath);
-        }
+        let repoRoot: string | undefined = initialDir;
         if (!repoRoot) {
-            repoRoot = findGitRoot(appPath);
+            repoRoot = findGitRoot(appPath) ?? undefined;
         }
         if (!repoRoot) {
             repoRoot = path.dirname(appPath);
@@ -181,7 +190,7 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
 
                     progress.report({ message: `Checking if tag "${tag}" exists...` });
                     let tagCreated = false;
-                    if (!(await tagExists(tag))) {
+                    if (!(await tagExists(tag, cwd))) {
                         progress.report({ message: `Tag "${tag}" does not exist. Prompting user...` });
                         const action = await vscode.window.showInformationMessage(
                             `Tag "${tag}" does not exist. Create and push it?`,
@@ -192,7 +201,7 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
 
                         if (action === 'Create & Push') {
                             progress.report({ message: 'Creating and pushing tag...' });
-                            await createAndPushTag(tag);
+                            await createAndPushTag(tag, cwd);
                             tagCreated = true;
                         } else {
                             showInfo('Release cancelled.');
@@ -211,7 +220,7 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
                     const releaseUrl = `https://github.com/${owner}/${repo}/releases/tag/${tag}`;
                     await execCommand(
                         `gh release create ${tag} --title "${tag}" --notes "Automated release for ${tag}" --repo ${owner}/${repo} "${zipName}"`,
-                        { cwd }
+                        cwd
                     );
 
                     await vscode.env.clipboard.writeText(releaseUrl);
