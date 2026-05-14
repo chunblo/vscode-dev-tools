@@ -2,7 +2,7 @@
   "name": "vscode-dev-tools",
   "displayName": "Dev Tools",
   "description": "Convert the active Markdown file to JIRA-compatible format and copy to clipboard.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "vincentlo",
   "repository": { "type": "git", "url": "https://github.com/vincentlo/vscode-md-to-jira" },
   "engines": {
@@ -28,6 +28,10 @@
       {
         "command": "dev-tools.gitCommitUrl",
         "title": "Dev Tools: Git Commit Url (Copy)"
+      },
+      {
+        "command": "dev-tools.parseStringifiedJson",
+        "title": "Dev Tools: Parse Stringified JSON"
       }
     ],
     "configuration": {
