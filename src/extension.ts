@@ -3,6 +3,7 @@ import { convertToJira } from './converter';
 import { registerGitReleaseAl } from './tools/git-release-al';
 import { registerGitCommitUrl } from './tools/git-commit-url';
 import { registerJsonTools } from './tools/parse-stringified-json';
+import { registerGitCommitMessageAi } from './tools/git-commit-message-ai';
 
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
@@ -12,6 +13,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerGitReleaseAl(context);
     registerGitCommitUrl(context);
     registerJsonTools(context);
+    registerGitCommitMessageAi(context);
 }
 
 export function deactivate(): void {}
