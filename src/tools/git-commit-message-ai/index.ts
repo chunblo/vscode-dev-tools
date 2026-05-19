@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as https from 'https';
+import * as http from 'http';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { findGitRoot } from '../../shared/git';
@@ -195,10 +197,39 @@ function buildUserPrompt(
 // LLM helpers
 // ---------------------------------------------------------------------------
 
+async function httpRequest(
+    url: string,
+    method: 'GET' | 'POST',
+    headers: Record<string, string>,
+    body?: string
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const lib = parsedUrl.protocol === 'https:' ? https : http;
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port ? parseInt(parsedUrl.port, 10) : (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: parsedUrl.pathname + parsedUrl.search,
+            method,
+            headers,
+        };
+        const req = lib.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => resolve(data));
+        });
+        req.on('error', reject);
+        if (body) {
+            req.write(body);
+        }
+        req.end();
+    });
+}
+
 async function resolveModel(baseUrl: string, modelArg: string | null): Promise<string> {
     if (modelArg) return modelArg;
 
-    const resp = await execCommand(`curl -s "${baseUrl}/v1/models"`).catch(() => '');
+    const resp = await httpRequest(`${baseUrl}/v1/models`, 'GET', {}).catch(() => '');
     try {
         const body = JSON.parse(resp);
         const models = body.data || [];
@@ -229,23 +260,19 @@ async function callLlm(
         temperature: Math.round(temperature * 100) / 100,
     };
 
-    const data = JSON.stringify(payload);
+    const body = JSON.stringify(payload);
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body).toString(),
     };
     if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const headerLines = Object.entries(headers)
-        .map(([k, v]) => `-H "${k}: ${v}"`)
-        .join(' ');
-    const curlCmd = `curl -s -X POST "${baseUrl}/v1/chat/completions" ${headerLines} -d '${data.replace(/'/g, "\\'")}'`;
-
-    const resp = await execCommand(curlCmd).catch(() => '');
+    const resp = await httpRequest(`${baseUrl}/v1/chat/completions`, 'POST', headers, body).catch(() => '');
     try {
-        const body = JSON.parse(resp);
-        return body.choices?.[0]?.message?.content?.trim() || '';
+        const parsed = JSON.parse(resp);
+        return parsed.choices?.[0]?.message?.content?.trim() || '';
     } catch {
         throw new Error(`LLM call failed: ${resp}`);
     }
@@ -303,7 +330,17 @@ async function selectProvider(): Promise<{ id: string; model: string | null } | 
 
 export async function registerGitCommitMessageAi(context: vscode.ExtensionContext): Promise<void> {
     const command = vscode.commands.registerCommand('dev-tools.gitCommitMessageAi', async () => {
-        const workspaceRoot = findGitRoot();
+        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
+        let workspaceRoot: string | null = null;
+        if (activeFilePath) {
+            workspaceRoot = findGitRoot(activeFilePath);
+        }
+        if (!workspaceRoot) {
+            const fallback = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (fallback) {
+                workspaceRoot = findGitRoot(fallback);
+            }
+        }
         if (!workspaceRoot) {
             showError('No git repository found.');
             return;
