@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { findGitRoot } from '../../shared/git';
+import { resolveWorkspaceRepoRoot } from '../../shared/git';
 
 const execAsync = promisify(exec);
 
@@ -47,17 +47,7 @@ interface CommitItem extends vscode.QuickPickItem {
 
 export async function registerGitCommitUrl(context: vscode.ExtensionContext): Promise<void> {
     const command = vscode.commands.registerCommand('dev-tools.gitCommitUrl', async () => {
-        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
-        let cwd: string | undefined;
-        if (activeFilePath) {
-            cwd = findGitRoot(activeFilePath);
-        }
-        if (!cwd) {
-            const fallback = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (fallback) {
-                cwd = findGitRoot(fallback);
-            }
-        }
+        const cwd = await resolveWorkspaceRepoRoot();
         if (!cwd) {
             showError('No git repository found.');
             return;

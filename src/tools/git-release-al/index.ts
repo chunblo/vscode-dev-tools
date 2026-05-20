@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import archiver from 'archiver';
-import { findGitRoot } from '../../shared/git';
+import { resolveWorkspaceRepoRoot } from '../../shared/git';
 
 const execAsync = promisify(exec);
 
@@ -83,16 +83,10 @@ function createZip(sourcePath: string, zipPath: string): Promise<void> {
 
 export async function registerGitReleaseAl(context: vscode.ExtensionContext): Promise<void> {
     const command = vscode.commands.registerCommand('dev-tools.gitReleaseAl', async () => {
-        const activeFilePath = vscode.window.activeTextEditor?.document.uri.fsPath;
-        let initialDir: string | undefined;
-        if (activeFilePath) {
-            initialDir = findGitRoot(activeFilePath) ?? undefined;
-        }
-        if (!initialDir) {
-            const fallback = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (fallback) {
-                initialDir = findGitRoot(fallback) ?? undefined;
-            }
+        const repoRoot = await resolveWorkspaceRepoRoot();
+        if (!repoRoot) {
+            showError('No git repository found.');
+            return;
         }
 
         const appFile = await vscode.window.showOpenDialog({
@@ -100,7 +94,7 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
             openLabel: 'Select file',
             canSelectMany: false,
             filters: { 'All Files': ['*'] },
-            defaultUri: initialDir ? vscode.Uri.file(initialDir) : undefined,
+            defaultUri: vscode.Uri.file(repoRoot),
         });
 
         if (!appFile) {
@@ -119,13 +113,6 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
             return;
         }
 
-        let repoRoot: string | undefined = initialDir;
-        if (!repoRoot) {
-            repoRoot = findGitRoot(appPath) ?? undefined;
-        }
-        if (!repoRoot) {
-            repoRoot = path.dirname(appPath);
-        }
         const cwd = repoRoot;
 
         const tag = await vscode.window.showInputBox({
