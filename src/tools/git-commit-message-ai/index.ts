@@ -303,18 +303,7 @@ async function selectProvider(): Promise<{ id: string; model: string | null } | 
     const provider = PROVIDERS[selected.id];
 
     if (provider.defaultModel) {
-        const useDefault = await vscode.window.showInformationMessage(
-            `Use default model "${provider.defaultModel}"?`,
-            'Yes', 'No'
-        );
-        if (useDefault === 'Yes') {
-            model = provider.defaultModel;
-        } else {
-            model = await vscode.window.showInputBox({
-                prompt: `Enter model name for ${selected.id}`,
-                value: provider.defaultModel || '',
-            }) || null;
-        }
+        model = provider.defaultModel;
     } else {
         model = await vscode.window.showInputBox({
             prompt: `Enter model name for ${selected.id} (leave empty to auto-detect)`,
