@@ -11,7 +11,7 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 | `Dev Tools: Export MD to JIRA (Cloud)` | Markdown (for JIRA Cloud) |
 | `Dev Tools: Export MD to JIRA (Server)` | Wiki Markup (for JIRA Server / Confluence) |
 | `Dev Tools: Git Release (Zip)` | Creates a GitHub release from a `.app` file |
-| `Dev Tools: Git Commit Url (Copy)` | Shows recent commits in a picker, copies selected commit URL to clipboard |
+| `Dev Tools: Git Commit Url (Copy)` | Shows recent commits in a picker, copies selected commit URL(s) to clipboard |
 | `Dev Tools: Git Commit Message (AI)` | Generates a Conventional Commits message from staged changes using a local or remote LLM, copies result to clipboard |
 | `Dev Tools: JSON - Parse` | Parses JSON (including double-encoded/stringified), displays prettified result in new document |
 | `Dev Tools: JSON - Minify` | Minifies JSON to a single line, displays result in new document |

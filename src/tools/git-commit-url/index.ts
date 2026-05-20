@@ -111,17 +111,20 @@ export async function registerGitCommitUrl(context: vscode.ExtensionContext): Pr
             });
 
         const selection = await vscode.window.showQuickPick(commits, {
-            placeHolder: 'Select a commit to copy its URL',
+            placeHolder: 'Select commit(s) to copy their URL(s)',
+            canPickMany: true,
             matchOnDetail: false,
         });
 
-        if (!selection) {
+        if (!selection || selection.length === 0) {
             return;
         }
 
-        const url = `https://github.com/${owner}/${repo}/commit/${selection.fullHash}`;
-        await vscode.env.clipboard.writeText(url);
-        showInfo(`URL copied: ${url}`);
+        const urls = selection.map(
+            (item) => `https://github.com/${owner}/${repo}/commit/${item.fullHash}`
+        );
+        await vscode.env.clipboard.writeText(urls.join('\n'));
+        showInfo(`Copied ${urls.length} commit URL(s) to clipboard.`);
     });
 
     context.subscriptions.push(command);
