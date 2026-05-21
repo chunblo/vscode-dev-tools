@@ -16,8 +16,34 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 | `Dev Tools: JSON - Parse` | Parses JSON (including double-encoded/stringified), displays prettified result in new document |
 | `Dev Tools: JSON - Minify` | Minifies JSON to a single line, displays result in new document |
 | `Dev Tools: JSON - Stringify` | Double-encodes JSON into a JSON string value, displays result in new document |
+| `Dev Tools: JIRA Activity` | Shows recent JIRA activity, collapses consecutive duplicate keys, copies selected keys to clipboard |
 
 A toast notification confirms the content was copied to your clipboard.
+
+## JIRA Activity
+
+This command fetches recent activity from your JIRA instance and displays it in a multi-select picker.
+Consecutive duplicate issue keys are collapsed to show only the latest entry in each run.
+
+### Configuration
+
+Set these in VS Code settings (or `settings.json`):
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `dev-tools.jiraActivityUser` | string | *(required)* | JIRA username |
+| `dev-tools.jiraActivityPassword` | string | *(required, sensitive)* | JIRA password |
+| `dev-tools.jiraActivityBaseUrl` | string | *(required)* | Base URL for JIRA server (e.g., `http://jira.example.com:8080`) |
+| `dev-tools.jiraActivityMaxResults` | number | `50` | Maximum number of activity entries to fetch |
+
+### Usage
+
+1. Set your JIRA username and password in settings (sensitive setting).
+2. Optionally override the JIRA base URL if using a different server.
+3. Run `Dev Tools: JIRA Activity` via the Command Palette.
+4. A notification shows "Loading Jira activity..." while fetching data.
+5. Select one or more JIRA keys in the picker.
+6. Selected keys are copied to clipboard as a comma-separated list.
 
 ## Git Commit Message (AI)
 

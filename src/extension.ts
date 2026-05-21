@@ -5,10 +5,13 @@ import { registerGitCommitUrl } from './tools/git-commit-url';
 import { registerJsonTools } from './tools/parse-stringified-json';
 import { registerGitCommitMessageAi } from './tools/git-commit-message-ai';
 
+import { jiraActivityCommand } from './tools/jira-activity';
+
 export function activate(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
         vscode.commands.registerCommand('dev-tools.exportCloud', () => exportToJira('cloud')),
         vscode.commands.registerCommand('dev-tools.exportServer', () => exportToJira('server')),
+        vscode.commands.registerCommand('dev-tools.jiraActivity', jiraActivityCommand),
     );
     registerGitReleaseAl(context);
     registerGitCommitUrl(context);

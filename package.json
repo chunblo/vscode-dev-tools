@@ -2,16 +2,21 @@
   "name": "vscode-dev-tools",
   "displayName": "Dev Tools",
   "description": "Convert the active Markdown file to JIRA-compatible format and copy to clipboard.",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "publisher": "vincentlo",
-  "repository": { "type": "git", "url": "https://github.com/vincentlo/vscode-md-to-jira" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vincentlo/vscode-md-to-jira"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [],
   "main": "./out/extension.js",
-"contributes": {
+  "contributes": {
     "commands": [
       {
         "command": "dev-tools.exportCloud",
@@ -44,6 +49,10 @@
       {
         "command": "dev-tools.jsonStringify",
         "title": "Dev Tools: JSON - Stringify"
+      },
+      {
+        "command": "dev-tools.jiraActivity",
+        "title": "Dev Tools: JIRA Activity"
       }
     ],
     "configuration": {
@@ -53,6 +62,27 @@
           "type": "number",
           "default": 50,
           "description": "Number of commits to show in the Git Commit Url picker"
+        },
+        "dev-tools.jiraActivityUser": {
+          "type": "string",
+          "default": "",
+          "description": "Jira username for JIRA Activity command (-u)."
+        },
+        "dev-tools.jiraActivityMaxResults": {
+          "type": "number",
+          "default": 50,
+          "description": "Maximum number of activity entries to retrieve for JIRA Activity (-n)."
+        },
+        "dev-tools.jiraActivityPassword": {
+          "type": "string",
+          "default": "",
+          "description": "Jira password for JIRA Activity command (-p). (Sensitive)",
+          "markdownDescription": "Jira password for JIRA Activity command (-p). **Sensitive**."
+        },
+        "dev-tools.jiraActivityBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL for Jira server (e.g., http://jira.example.com:8080). Required."
         }
       }
     }
@@ -65,7 +95,9 @@
   },
   "dependencies": {
     "archiver": "^7.0.1",
-    "marked": "^14.0.0"
+    "axios": "^1.16.1",
+    "marked": "^14.0.0",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
