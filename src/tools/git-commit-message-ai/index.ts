@@ -17,22 +17,9 @@ interface FileDiff {
     diff: string;
 }
 
-interface LlmProvider {
-    baseUrl: string;
-    apiKeyEnv: string | null;
-    defaultModel: string | null;
-}
-
 // ---------------------------------------------------------------------------
-// Constants (mirrored from Python script)
+// Constants
 // ---------------------------------------------------------------------------
-
-const PROVIDERS: Record<string, LlmProvider> = {
-    lmstudio:  { baseUrl: 'http://127.0.0.1:1234', apiKeyEnv: null, defaultModel: null },
-    litellm:   { baseUrl: 'http://127.0.0.1:4000', apiKeyEnv: 'LITELLM_API_KEY', defaultModel: null },
-    nim:       { baseUrl: 'https://integrate.api.nvidia.com', apiKeyEnv: 'NVIDIA_API_KEY', defaultModel: 'minimaxai/minimax-m2.7' },
-    openrouter:{ baseUrl: 'https://openrouter.ai/api', apiKeyEnv: 'OPENROUTER_API_KEY', defaultModel: 'openai/gpt-4o' },
-};
 
 const SYSTEM_PROMPT = `You are an AI programming assistant helping a developer write the best git commit message for their code changes.
 You excel at interpreting the purpose behind code changes to craft succinct, clear commit messages.
@@ -197,12 +184,20 @@ function buildUserPrompt(
 // LLM helpers
 // ---------------------------------------------------------------------------
 
+interface HttpResponse {
+    statusCode: number;
+    body: string;
+}
+
+class TimeoutError extends Error {}
+
 async function httpRequest(
     url: string,
     method: 'GET' | 'POST',
     headers: Record<string, string>,
-    body?: string
-): Promise<string> {
+    body?: string,
+    timeoutMs?: number
+): Promise<HttpResponse> {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(url);
         const lib = parsedUrl.protocol === 'https:' ? https : http;
@@ -216,9 +211,15 @@ async function httpRequest(
         const req = lib.request(options, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
-            res.on('end', () => resolve(data));
+            res.on('end', () => resolve({ statusCode: res.statusCode || 0, body: data }));
         });
         req.on('error', reject);
+        if (timeoutMs) {
+            req.setTimeout(timeoutMs, () => {
+                req.destroy();
+                reject(new TimeoutError(`Request timed out after ${timeoutMs / 1000}s`));
+            });
+        }
         if (body) {
             req.write(body);
         }
@@ -226,20 +227,44 @@ async function httpRequest(
     });
 }
 
+function describeError(err: unknown): string {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof TimeoutError) {
+        return `${msg}. Check that the endpoint is reachable and that no firewall/VPN is blocking VS Code's network access.`;
+    }
+    return msg;
+}
+
+function truncate(text: string, max = 300): string {
+    return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
 async function resolveModel(baseUrl: string, modelArg: string | null): Promise<string> {
     if (modelArg) return modelArg;
 
-    const resp = await httpRequest(`${baseUrl}/v1/models`, 'GET', {}).catch(() => '');
+    let resp: HttpResponse;
     try {
-        const body = JSON.parse(resp);
-        const models = body.data || [];
-        if (!models.length) {
-            throw new Error('No models available');
-        }
-        return models[0].id;
-    } catch {
-        throw new Error(`Could not fetch models from ${baseUrl}. Specify a model with --model.`);
+        resp = await httpRequest(`${baseUrl}/v1/models`, 'GET', {}, undefined, 15000);
+    } catch (err) {
+        throw new Error(`Could not reach ${baseUrl}/v1/models: ${describeError(err)}`);
     }
+
+    let parsed: any;
+    try {
+        parsed = JSON.parse(resp.body);
+    } catch {
+        throw new Error(`Could not fetch models from ${baseUrl} (status ${resp.statusCode}): ${truncate(resp.body)}`);
+    }
+
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw new Error(`Could not fetch models from ${baseUrl} (status ${resp.statusCode}): ${parsed.error?.message || truncate(resp.body)}`);
+    }
+
+    const models = parsed.data || [];
+    if (!models.length) {
+        throw new Error(`No models available at ${baseUrl}. Specify a model in the endpoint config.`);
+    }
+    return models[0].id;
 }
 
 async function callLlm(
@@ -269,48 +294,79 @@ async function callLlm(
         headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const resp = await httpRequest(`${baseUrl}/v1/chat/completions`, 'POST', headers, body).catch(() => '');
+    let resp: HttpResponse;
     try {
-        const parsed = JSON.parse(resp);
-        return parsed.choices?.[0]?.message?.content?.trim() || '';
-    } catch {
-        throw new Error(`LLM call failed: ${resp}`);
+        resp = await httpRequest(`${baseUrl}/v1/chat/completions`, 'POST', headers, body, 180000);
+    } catch (err) {
+        throw new Error(`LLM call failed: could not reach ${baseUrl}/v1/chat/completions: ${describeError(err)}`);
     }
+
+    let parsed: any;
+    try {
+        parsed = JSON.parse(resp.body);
+    } catch {
+        throw new Error(`LLM call failed (status ${resp.statusCode}): ${truncate(resp.body)}`);
+    }
+
+    if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw new Error(`LLM call failed (status ${resp.statusCode}): ${parsed.error?.message || truncate(resp.body)}`);
+    }
+
+    const content = parsed.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+        throw new Error(`LLM returned no content. Response: ${truncate(JSON.stringify(parsed))}`);
+    }
+    return content;
 }
 
 // ---------------------------------------------------------------------------
-// Provider selection
+// Endpoint selection
 // ---------------------------------------------------------------------------
 
-interface ProviderQuickPick extends vscode.QuickPickItem {
-    id: string;
+interface RawEndpoint {
+    name?: string;
+    baseUrl?: string;
+    apiKey?: string;
+    model?: string;
 }
 
-async function selectProvider(): Promise<{ id: string; model: string | null } | null> {
-    const items: ProviderQuickPick[] = Object.keys(PROVIDERS).map(id => ({
-        label: id,
-        description: PROVIDERS[id].baseUrl,
-        id,
+interface Endpoint {
+    name: string;
+    baseUrl: string;
+    apiKey: string | null;
+    model: string | null;
+}
+
+function readEndpoints(config: vscode.WorkspaceConfiguration): Endpoint[] {
+    const raw = config.get<RawEndpoint[]>('gitCommitMessageAiEndpoints', []);
+    return raw
+        .filter(e => e && e.baseUrl && e.baseUrl.trim())
+        .map(e => ({
+            name: (e.name && e.name.trim()) || e.baseUrl!.trim(),
+            baseUrl: e.baseUrl!.trim().replace(/\/+$/, ''),
+            apiKey: (e.apiKey && e.apiKey.trim()) || null,
+            model: (e.model && e.model.trim()) || null,
+        }));
+}
+
+interface EndpointQuickPick extends vscode.QuickPickItem {
+    endpoint: Endpoint;
+}
+
+async function selectEndpoint(endpoints: Endpoint[]): Promise<Endpoint | null> {
+    if (endpoints.length === 1) return endpoints[0];
+
+    const items: EndpointQuickPick[] = endpoints.map(endpoint => ({
+        label: endpoint.name,
+        description: endpoint.baseUrl,
+        endpoint,
     }));
 
     const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select LLM provider',
+        placeHolder: 'Select LLM endpoint',
     });
 
-    if (!selected) return null;
-
-    let model: string | null = null;
-    const provider = PROVIDERS[selected.id];
-
-    if (provider.defaultModel) {
-        model = provider.defaultModel;
-    } else {
-        model = await vscode.window.showInputBox({
-            prompt: `Enter model name for ${selected.id} (leave empty to auto-detect)`,
-        }) || null;
-    }
-
-    return { id: selected.id, model };
+    return selected ? selected.endpoint : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -332,24 +388,24 @@ export async function registerGitCommitMessageAi(context: vscode.ExtensionContex
             return;
         }
 
-        // Select provider
-        const providerSelection = await selectProvider();
-        if (!providerSelection) return;
+        // Read settings and pick an endpoint
+        const config = vscode.workspace.getConfiguration('dev-tools');
+        const endpoints = readEndpoints(config);
 
-        const provider = PROVIDERS[providerSelection.id];
-        const apiKey = provider.apiKeyEnv ? process.env[provider.apiKeyEnv] || null : null;
-
-        if (provider.apiKeyEnv && !apiKey) {
-            showError(`${provider.apiKeyEnv} environment variable is not set.`);
+        if (!endpoints.length) {
+            showError('No endpoints configured. Add one or more entries to the "dev-tools.gitCommitMessageAiEndpoints" setting.');
             return;
         }
+
+        const endpoint = await selectEndpoint(endpoints);
+        if (!endpoint) return;
 
         // Show progress
         await vscode.window.withProgress(
             { location: vscode.ProgressLocation.Notification, title: 'Generating commit message...' },
             async () => {
                 try {
-                    const model = await resolveModel(provider.baseUrl, providerSelection.model);
+                    const model = await resolveModel(endpoint.baseUrl, endpoint.model);
                     const repoName = await getRepoName(workspaceRoot);
                     const branchName = await getBranchName(workspaceRoot);
                     const userName = await execCommand('git config user.name', workspaceRoot).catch(() => '');
@@ -362,14 +418,9 @@ export async function registerGitCommitMessageAi(context: vscode.ExtensionContex
                     }
 
                     const userPrompt = buildUserPrompt(repoName, branchName, included, dropped, userCommits, repoCommits);
-                    const message = await callLlm(userPrompt, provider.baseUrl, model, apiKey);
-
-                    if (message) {
-                        await vscode.env.clipboard.writeText(message);
-                        showInfo('Commit message generated and copied to clipboard!');
-                    } else {
-                        showError('No response from LLM.');
-                    }
+                    const message = await callLlm(userPrompt, endpoint.baseUrl, model, endpoint.apiKey);
+                    await vscode.env.clipboard.writeText(message);
+                    showInfo('Commit message generated and copied to clipboard!');
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
                     showError(`Failed: ${msg}`);

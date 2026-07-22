@@ -48,53 +48,27 @@ Set these in VS Code settings (or `settings.json`):
 ## Git Commit Message (AI)
 
 This command calls an LLM to generate a commit message from your staged `git` changes.
-Select a provider when prompted; providers that require an API key read it from an environment variable.
+It talks to any OpenAI-compatible chat completions API (`POST {baseUrl}/v1/chat/completions`), configured via the `dev-tools.gitCommitMessageAiEndpoints` setting.
 
-| Provider | Environment variable | Notes |
-|---|---|---|
-| `lmstudio` | *(none)* | Local server, no key needed |
-| `litellm` | `LITELLM_API_KEY` | Local proxy |
-| `nim` | `NVIDIA_API_KEY` | NVIDIA Inference Microservices |
-| `openrouter` | `OPENROUTER_API_KEY` | OpenRouter cloud API |
+### Configuration
 
-VS Code reads environment variables from the shell that launched it.
-Set the variable **before** opening VS Code.
+Set `dev-tools.gitCommitMessageAiEndpoints` in `settings.json` to an array of endpoints:
 
-### macOS / Linux
-
-Add the export to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.bash_profile`), then restart your terminal and VS Code:
-
-```bash
-export OPENROUTER_API_KEY="sk-or-..."
+```json
+"dev-tools.gitCommitMessageAiEndpoints": [
+  { "name": "LM Studio", "baseUrl": "http://127.0.0.1:1234" },
+  { "name": "OpenRouter", "baseUrl": "https://openrouter.ai/api", "apiKey": "sk-or-...", "model": "openai/gpt-4o" }
+]
 ```
 
-To verify it is visible to VS Code, open the integrated terminal and run:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Display label shown when choosing between multiple endpoints |
+| `baseUrl` | string | yes | OpenAI-compatible API base URL (the tool appends `/v1/...`) |
+| `apiKey` | string | no | Sent as `Authorization: Bearer <apiKey>`. Omit for local endpoints that need no key. *(Sensitive)* |
+| `model` | string | no | Model name. Omit to auto-detect the first model from `/v1/models` |
 
-```bash
-echo $OPENROUTER_API_KEY
-```
-
-### Windows
-
-**Option A — System/User environment variables (persistent):**
-
-1. Open **Start** → search **"Edit the system environment variables"**.
-2. Click **Environment Variables…**
-3. Under **User variables**, click **New** and enter the variable name and value.
-4. Click **OK**, then restart VS Code.
-
-**Option B — PowerShell (current session only):**
-
-```powershell
-$env:OPENROUTER_API_KEY = "sk-or-..."
-code .
-```
-
-To verify it is visible after setting:
-
-```powershell
-$env:OPENROUTER_API_KEY
-```
+If exactly one endpoint is configured it's used automatically. If more than one is configured, a quick pick (name + base URL) is shown each run.
 
 ## What gets converted
 

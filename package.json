@@ -2,7 +2,7 @@
   "name": "vscode-dev-tools",
   "displayName": "Dev Tools",
   "description": "Convert the active Markdown file to JIRA-compatible format and copy to clipboard.",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "publisher": "vincentlo",
   "repository": {
     "type": "git",
@@ -62,6 +62,35 @@
           "type": "number",
           "default": 50,
           "description": "Number of commits to show in the Git Commit Url picker"
+        },
+        "dev-tools.gitCommitMessageAiEndpoints": {
+          "type": "array",
+          "default": [],
+          "description": "OpenAI-compatible endpoints for Git Commit Message (AI). Configure one or more; if more than one is set you'll be prompted to pick one each run.",
+          "items": {
+            "type": "object",
+            "required": ["name", "baseUrl"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name shown when choosing between multiple endpoints."
+              },
+              "baseUrl": {
+                "type": "string",
+                "description": "OpenAI-compatible API base URL. The tool appends /v1/... (e.g. http://127.0.0.1:1234, https://openrouter.ai/api)."
+              },
+              "apiKey": {
+                "type": "string",
+                "default": "",
+                "description": "API key for this endpoint (sent as a Bearer token). Leave empty for local endpoints that require no key. (Sensitive)"
+              },
+              "model": {
+                "type": "string",
+                "default": "",
+                "description": "Model name to use. Leave empty to auto-detect the first model from /v1/models."
+              }
+            }
+          }
         },
         "dev-tools.jiraActivityUser": {
           "type": "string",
