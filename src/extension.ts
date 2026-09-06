@@ -3,6 +3,7 @@ import { convertToJira } from './converter';
 import { registerGitReleaseAl } from './tools/git-release-al';
 import { registerGitCommitUrl } from './tools/git-commit-url';
 import { registerJsonTools } from './tools/parse-stringified-json';
+import { registerTextTools } from './tools/minify-text';
 import { registerGitCommitMessageAi } from './tools/git-commit-message-ai';
 
 import { jiraActivityCommand } from './tools/jira-activity';
@@ -16,6 +17,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerGitReleaseAl(context);
     registerGitCommitUrl(context);
     registerJsonTools(context);
+    registerTextTools(context);
     registerGitCommitMessageAi(context);
 }
 

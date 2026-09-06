@@ -16,6 +16,7 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 | `Dev Tools: JSON - Parse` | Parses JSON (including double-encoded/stringified), displays prettified result in new document |
 | `Dev Tools: JSON - Minify` | Minifies JSON to a single line, displays result in new document |
 | `Dev Tools: JSON - Stringify` | Double-encodes JSON into a JSON string value, displays result in new document |
+| `Dev Tools: Text - Minify` | Collapses all whitespace (newlines, tabs, repeated spaces) into a single line, displays result in new document |
 | `Dev Tools: JIRA Activity` | Shows recent JIRA activity, collapses consecutive duplicate keys, copies selected keys to clipboard |
 
 A toast notification confirms the content was copied to your clipboard.
