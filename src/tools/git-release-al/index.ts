@@ -62,6 +62,15 @@ async function tagExists(tag: string, cwd: string): Promise<boolean> {
     }
 }
 
+async function releaseExists(tag: string, owner: string, repo: string, cwd: string): Promise<boolean> {
+    try {
+        await execCommand(`gh release view "${tag}" --repo "${owner}/${repo}"`, cwd);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 async function createAndPushTag(tag: string, cwd: string): Promise<void> {
     await execCommand(`git tag ${tag}`, cwd);
     await execCommand(`git push origin ${tag}`, cwd);
@@ -190,6 +199,27 @@ export async function registerGitReleaseAl(context: vscode.ExtensionContext): Pr
                             showInfo('Release cancelled.');
                             return;
                         }
+                    }
+
+                    progress.report({ message: `Checking if release "${tag}" already exists...` });
+                    if (await releaseExists(tag, owner, repo, cwd)) {
+                        const action = await vscode.window.showWarningMessage(
+                            `A GitHub release for tag "${tag}" already exists. Delete it first?`,
+                            { modal: true },
+                            'Delete & Recreate',
+                            'Cancel'
+                        );
+
+                        if (action !== 'Delete & Recreate') {
+                            showInfo('Release cancelled.');
+                            return;
+                        }
+
+                        progress.report({ message: 'Deleting existing GitHub release...' });
+                        await execCommand(
+                            `gh release delete "${tag}" --repo "${owner}/${repo}" --yes`,
+                            cwd
+                        );
                     }
 
                     progress.report({ message: 'Creating zip archive...' });
