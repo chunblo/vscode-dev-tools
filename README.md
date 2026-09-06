@@ -18,6 +18,12 @@ Open the Command Palette (`Cmd+Shift+P`) and run:
 | `Dev Tools: JSON - Stringify` | Double-encodes JSON into a JSON string value, displays result in new document |
 | `Dev Tools: Text - Minify` | Collapses all whitespace (newlines, tabs, repeated spaces) into a single line, displays result in new document |
 | `Dev Tools: JIRA Activity` | Shows recent JIRA activity, collapses consecutive duplicate keys, copies selected keys to clipboard |
+| `Dev Tools: Case Convert` | Converts the selection (or whole document) between camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE, and Title Case |
+| `Dev Tools: Lines` | Line operations on selection (or whole document): sort A→Z / Z→A / case-insensitive, remove duplicates, trim, remove empty lines, reverse |
+| `Dev Tools: Base64 Encode/Decode` | Encodes or decodes the current editor file or a selected file as Base64, displays result in new document |
+| `Dev Tools: URL Encode/Decode` | Encodes or decodes the current editor file or a selected file as a URL component, displays result in new document |
+| `Dev Tools: JWT Decode` | Decodes the first JWT found in the content into pretty-printed header and payload JSON, displays result in new document |
+| `Dev Tools: Epoch Convert` | Converts between epoch timestamps and ISO 8601 (current time, epoch↔ISO), copies result to clipboard |
 
 A toast notification confirms the content was copied to your clipboard.
 

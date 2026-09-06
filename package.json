@@ -57,6 +57,30 @@
       {
         "command": "dev-tools.jiraActivity",
         "title": "Dev Tools: JIRA Activity"
+      },
+      {
+        "command": "dev-tools.caseConvert",
+        "title": "Dev Tools: Case Convert"
+      },
+      {
+        "command": "dev-tools.lineTools",
+        "title": "Dev Tools: Lines"
+      },
+      {
+        "command": "dev-tools.base64Codec",
+        "title": "Dev Tools: Base64 Encode/Decode"
+      },
+      {
+        "command": "dev-tools.urlCodec",
+        "title": "Dev Tools: URL Encode/Decode"
+      },
+      {
+        "command": "dev-tools.jwtDecode",
+        "title": "Dev Tools: JWT Decode"
+      },
+      {
+        "command": "dev-tools.epochConvert",
+        "title": "Dev Tools: Epoch Convert"
       }
     ],
     "configuration": {

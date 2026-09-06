@@ -5,6 +5,12 @@ import { registerGitCommitUrl } from './tools/git-commit-url';
 import { registerJsonTools } from './tools/parse-stringified-json';
 import { registerTextTools } from './tools/minify-text';
 import { registerGitCommitMessageAi } from './tools/git-commit-message-ai';
+import { registerCaseConvert } from './tools/case-convert';
+import { registerLineTools } from './tools/line-tools';
+import { registerBase64Codec } from './tools/base64-codec';
+import { registerUrlCodec } from './tools/url-codec';
+import { registerJwtDecode } from './tools/jwt-decode';
+import { registerEpochConvert } from './tools/epoch-convert';
 
 import { jiraActivityCommand } from './tools/jira-activity';
 
@@ -19,6 +25,12 @@ export function activate(context: vscode.ExtensionContext): void {
     registerJsonTools(context);
     registerTextTools(context);
     registerGitCommitMessageAi(context);
+    registerCaseConvert(context);
+    registerLineTools(context);
+    registerBase64Codec(context);
+    registerUrlCodec(context);
+    registerJwtDecode(context);
+    registerEpochConvert(context);
 }
 
 export function deactivate(): void {}
